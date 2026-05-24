@@ -145,8 +145,14 @@ async function agentGeocode(city) {
   if (!arr || !arr.length) throw new Error('city_not_found');
   const hit = arr[0];
   setStep(1, 'done');
+  const rawName = (hit.address?.city || hit.address?.town || hit.address?.village || hit.address?.county || hit.address?.state || hit.name || hit.display_name.split(',')[0]).trim();
+  // Strip administrative prefixes ("Special Region of", "Province of", "City of", etc.)
+  const cleanName = rawName
+    .replace(/^(Special Region of|Special Capital Region of|Province of|City of|Municipality of|District of|Region of)\s+/i, '')
+    .replace(/\s+(Regency|Province|Region|Prefecture|Municipality)$/i, '')
+    .trim();
   return {
-    name: (hit.address?.city || hit.address?.town || hit.address?.village || hit.address?.county || hit.name || hit.display_name.split(',')[0]).trim(),
+    name: cleanName || rawName,
     full: hit.display_name,
     country: hit.address?.country || '',
     lat: parseFloat(hit.lat),
