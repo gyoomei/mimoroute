@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="MimoRoute — AI travel planner. Paste any city, budget, and time. Get a multi-stop itinerary built by a 5-agent pipeline. Free. No API key.">
+<meta name="theme-color" content="#0a0c12">
+<title>MimoRoute · AI Travel Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --bg:#0a0c12; --bg2:#10131c; --panel:#141826; --panel2:#1a1f30;
+    --text:#f4f1e8; --muted:#9a9bb0; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.16);
+    --acc:#ff8c42; --acc2:#ffb56b; --warm:#ffd9a6;
+    --sun:#ffb02e; --sea:#4dd0e1; --leaf:#7cd47a; --rose:#ff6b9d;
+    --grad-warm:linear-gradient(135deg,#ff8c42 0%,#ff6b35 35%,#e94560 70%,#9b3f8e 100%);
+    --grad-sky:linear-gradient(135deg,#ffb02e 0%,#ff8c42 50%,#ff6b9d 100%);
+    --grad-sea:linear-gradient(135deg,#4dd0e1 0%,#7c9eff 100%);
+    --shadow:0 20px 60px -20px rgba(255,140,66,.18), 0 8px 30px -10px rgba(0,0,0,.5);
+  }
+  [data-theme="light"]{
+    --bg:#fbf7ee; --bg2:#f4ecdb; --panel:#ffffff; --panel2:#fdf6e7;
+    --text:#1a1208; --muted:#6a5a45; --line:rgba(0,0,0,.10); --line2:rgba(0,0,0,.20);
+    --acc:#c34d10; --acc2:#9b3a08; --warm:#a35d20;
+    --shadow:0 20px 60px -20px rgba(255,140,66,.30), 0 8px 30px -10px rgba(0,0,0,.10);
+  }
+  html{color-scheme:dark light}
+  body{
+    margin:0; min-height:100dvh; font-family:Inter,system-ui,sans-serif;
+    background:var(--bg); color:var(--text);
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(900px 600px at 12% 8%,rgba(255,176,46,.16),transparent 65%),
+      radial-gradient(700px 500px at 90% 20%,rgba(255,107,157,.13),transparent 65%),
+      radial-gradient(600px 400px at 70% 90%,rgba(77,208,225,.10),transparent 65%);
+    animation:drift 22s ease-in-out infinite alternate;
+  }
+  [data-theme="light"] body::before{
+    background:
+      radial-gradient(900px 600px at 12% 8%,rgba(255,176,46,.30),transparent 65%),
+      radial-gradient(700px 500px at 90% 20%,rgba(255,107,157,.20),transparent 65%),
+      radial-gradient(600px 400px at 70% 90%,rgba(77,208,225,.18),transparent 65%);
+  }
+  @keyframes drift{0%{transform:translate(0,0) scale(1)} 100%{transform:translate(-2%,1.5%) scale(1.05)}}
+
+  nav{
+    position:sticky; top:0; z-index:100;
+    display:flex; align-items:center; gap:clamp(8px,2vw,16px);
+    padding:14px clamp(16px,3vw,32px);
+    background:color-mix(in oklab,var(--bg) 70%,transparent);
+    backdrop-filter:blur(20px) saturate(1.4);
+    -webkit-backdrop-filter:blur(20px) saturate(1.4);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; font-size:18px; letter-spacing:-.02em}
+  .brand-mark{
+    width:32px; height:32px; border-radius:9px;
+    background:var(--grad-warm);
+    display:grid; place-items:center; color:#fff; font-size:18px;
+    box-shadow:0 4px 14px rgba(255,140,66,.45);
+  }
+  .nav-spacer{flex:1}
+  .nav-btn{
+    background:var(--panel); border:1px solid var(--line2); color:var(--text);
+    padding:8px 14px; border-radius:8px; cursor:pointer; font:inherit; font-size:13px; font-weight:500;
+    transition:transform .15s,border-color .15s;
+  }
+  .nav-btn:hover{border-color:var(--acc); transform:translateY(-1px)}
+
+  main{max-width:1180px; margin:0 auto; padding:clamp(20px,4vw,48px) clamp(16px,3vw,32px) 80px}
+
+  .hero{text-align:center; padding:clamp(28px,6vw,72px) 0 clamp(20px,4vw,48px)}
+  .eyebrow{
+    display:inline-block; padding:6px 14px; border-radius:99px;
+    background:color-mix(in oklab,var(--acc) 12%,transparent);
+    border:1px solid color-mix(in oklab,var(--acc) 30%,transparent);
+    color:var(--acc); font-family:"Geist Mono",ui-monospace,monospace; font-size:11px;
+    text-transform:uppercase; letter-spacing:.12em; margin-bottom:24px;
+  }
+  h1{
+    font-size:clamp(34px,6.5vw,68px); margin:0 0 18px; font-weight:800; letter-spacing:-.035em; line-height:1.02;
+  }
+  h1 em{
+    font-family:"Playfair Display",serif; font-style:italic; font-weight:500;
+    background:var(--grad-warm); -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sub{
+    color:var(--muted); font-size:clamp(15px,1.6vw,18px); max-width:640px; margin:0 auto 28px;
+    line-height:1.55;
+  }
+  .pills{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:8px}
+  .pill{
+    font-family:"Geist Mono",monospace; font-size:11px; padding:5px 10px; border-radius:6px;
+    background:var(--panel); border:1px solid var(--line); color:var(--muted);
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:clamp(20px,3vw,32px);
+    box-shadow:var(--shadow);
+  }
+  .planner{margin:0 auto; max-width:880px}
+
+  .form-grid{display:grid; gap:16px}
+  .field label{
+    display:block; font-family:"Geist Mono",monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.1em; color:var(--muted); margin-bottom:8px;
+  }
+  .field input, .field select{
+    width:100%; background:var(--bg2); border:1px solid var(--line2); border-radius:11px;
+    padding:13px 16px; color:var(--text); font:inherit; font-size:15px; transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--acc); box-shadow:0 0 0 3px color-mix(in oklab,var(--acc) 22%,transparent)}
+  .row-2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:560px){.row-2{grid-template-columns:1fr}}
+
+  .vibes{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
+  .vibe{
+    background:var(--bg2); border:1px solid var(--line2); border-radius:10px;
+    padding:9px 14px; cursor:pointer; font-size:13px; font-weight:500; color:var(--muted);
+    transition:all .15s; user-select:none;
+  }
+  .vibe:hover{border-color:var(--acc)}
+  .vibe.on{
+    background:var(--grad-warm); color:#fff; border-color:transparent;
+    box-shadow:0 4px 14px color-mix(in oklab,var(--acc) 35%,transparent);
+  }
+  .vibe-icon{margin-right:5px}
+
+  .examples{display:flex; flex-wrap:wrap; gap:6px; margin-top:14px}
+  .example{
+    background:transparent; border:1px solid var(--line); border-radius:8px;
+    padding:5px 10px; cursor:pointer; font-size:12px; color:var(--muted); transition:all .15s;
+  }
+  .example:hover{border-color:var(--acc); color:var(--acc)}
+
+  .cta{
+    width:100%; margin-top:18px; padding:16px 28px;
+    background:var(--grad-warm); color:#fff; border:none; border-radius:13px;
+    font:inherit; font-size:16px; font-weight:700; cursor:pointer;
+    transition:transform .15s, box-shadow .2s;
+    box-shadow:0 8px 24px color-mix(in oklab,var(--acc) 35%,transparent);
+  }
+  .cta:hover{transform:translateY(-2px); box-shadow:0 14px 32px color-mix(in oklab,var(--acc) 45%,transparent)}
+  .cta:disabled{opacity:.5; cursor:not-allowed; transform:none}
+
+  /* loading */
+  #loading{display:none; margin-top:24px; padding:18px; border-radius:14px; background:var(--panel2); border:1px solid var(--line)}
+  #loading.on{display:block}
+  .agent-step{display:flex; align-items:center; gap:12px; padding:9px 0; opacity:.4; transition:opacity .3s}
+  .agent-step.active{opacity:1}
+  .agent-step.done{opacity:.65}
+  .agent-step.done .step-num{background:var(--leaf); color:#0a0c12}
+  .step-num{
+    width:24px; height:24px; border-radius:7px; background:var(--bg2); border:1px solid var(--line2);
+    display:grid; place-items:center; font-family:"Geist Mono",monospace; font-size:11px; flex-shrink:0;
+  }
+  .agent-step.active .step-num{background:var(--acc); color:#fff; border-color:transparent; animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in oklab,var(--acc) 60%,transparent)} 50%{box-shadow:0 0 0 6px transparent}}
+  .step-label{font-size:13px}
+  .step-meta{font-family:"Geist Mono",monospace; font-size:11px; color:var(--muted); margin-left:auto}
+
+  #error{display:none; margin-top:24px; padding:14px 18px; border-radius:12px; background:color-mix(in oklab,#ff4d6d 14%,transparent); border:1px solid #ff4d6d; color:var(--text); font-size:14px}
+  #error.on{display:block}
+
+  /* result */
+  #result{display:none; margin-top:36px}
+  #result.on{display:block}
+  .result-head{
+    display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px;
+    margin-bottom:24px;
+  }
+  .result-title{font-size:clamp(24px,3.2vw,34px); font-weight:800; letter-spacing:-.02em; margin:0 0 6px}
+  .result-meta{font-family:"Geist Mono",monospace; font-size:12px; color:var(--muted)}
+
+  .result-actions{display:flex; gap:8px; flex-wrap:wrap}
+  .ico-btn{
+    background:var(--panel); border:1px solid var(--line2); color:var(--text);
+    padding:9px 14px; border-radius:9px; cursor:pointer; font:inherit; font-size:13px; font-weight:500;
+    display:inline-flex; align-items:center; gap:6px;
+    transition:all .15s;
+  }
+  .ico-btn:hover{border-color:var(--acc); color:var(--acc)}
+
+  .narrative{
+    margin-bottom:24px; padding:20px 22px; border-radius:16px;
+    background:color-mix(in oklab,var(--acc) 7%,var(--panel));
+    border-left:3px solid var(--acc);
+    line-height:1.65; font-size:15px;
+  }
+  .narrative .narrator-label{
+    font-family:"Geist Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.1em;
+    color:var(--acc); margin-bottom:8px; display:block;
+  }
+
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px}
+  @media (max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{padding:14px 16px; background:var(--panel); border:1px solid var(--line); border-radius:12px}
+  .stat-label{font-family:"Geist Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+  .stat-val{font-size:20px; font-weight:700; font-variant-numeric:tabular-nums}
+  .stat-sub{font-size:11px; color:var(--muted); margin-top:2px}
+
+  .timeline{position:relative; padding-left:34px}
+  .timeline::before{
+    content:""; position:absolute; left:14px; top:8px; bottom:8px; width:2px;
+    background:linear-gradient(to bottom, var(--acc), color-mix(in oklab,var(--acc) 40%,transparent));
+    border-radius:2px;
+  }
+  .stop{position:relative; margin-bottom:18px; padding:18px 20px; background:var(--panel); border:1px solid var(--line); border-radius:14px; transition:border-color .15s, transform .15s}
+  .stop:hover{border-color:var(--acc); transform:translateX(2px)}
+  .stop::before{
+    content:attr(data-num); position:absolute; left:-30px; top:18px;
+    width:28px; height:28px; border-radius:50%;
+    background:var(--grad-warm); color:#fff;
+    display:grid; place-items:center; font-family:"Geist Mono",monospace; font-weight:700; font-size:12px;
+    box-shadow:0 4px 12px color-mix(in oklab,var(--acc) 40%,transparent);
+  }
+  .stop-head{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px}
+  .stop-name{font-size:17px; font-weight:700; letter-spacing:-.01em}
+  .stop-time{font-family:"Geist Mono",monospace; font-size:12px; color:var(--acc); flex-shrink:0}
+  .stop-cat{font-family:"Geist Mono",monospace; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px}
+  .stop-tip{font-size:14px; color:var(--text); line-height:1.55; opacity:.92}
+  .stop-foot{display:flex; flex-wrap:wrap; gap:12px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line2); font-family:"Geist Mono",monospace; font-size:11px; color:var(--muted)}
+  .stop-foot a{color:var(--sea); text-decoration:none}
+  .stop-foot a:hover{text-decoration:underline}
+  .leg{
+    margin:-2px 0 16px 0;
+    padding:8px 14px;
+    font-family:"Geist Mono",monospace; font-size:11px; color:var(--muted);
+    border-left:2px dashed color-mix(in oklab,var(--acc) 50%,transparent);
+    margin-left:14px;
+  }
+  .leg-mode{color:var(--acc); font-weight:600; text-transform:uppercase; letter-spacing:.1em}
+
+  footer{margin-top:64px; padding:28px 0; border-top:1px solid var(--line); text-align:center; color:var(--muted); font-size:13px}
+  footer a{color:var(--acc); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  .colophon{font-family:"Geist Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.12em; opacity:.7; margin-top:6px}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.05ms !important}
+    body::before{animation:none}
+  }
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand">
+    <div class="brand-mark">🧭</div>
+    <span>MimoRoute</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <button class="nav-btn" id="lang-btn">EN</button>
+  <button class="nav-btn" id="theme-btn" aria-label="Toggle theme">☾</button>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="eyebrow" data-i18n="eyebrow">AI Travel Planner · MiMo V2.5</div>
+    <h1 data-i18n-html="heroH1">Tell me a city. Get a <em>real</em> day plan.</h1>
+    <p class="sub" data-i18n="heroSub">Five agents geocode, scout, curate, route, and narrate — turning any city, budget, and time window into a multi-stop itinerary with cafes, food, culture, and walking legs between stops.</p>
+    <div class="pills">
+      <span class="pill" data-i18n="pill1">🆓 No API key</span>
+      <span class="pill" data-i18n="pill2">🌍 200+ countries</span>
+      <span class="pill" data-i18n="pill3">📍 OpenStreetMap data</span>
+      <span class="pill" data-i18n="pill4">🚶 OSRM walking routes</span>
+    </div>
+  </section>
+
+  <section class="card planner">
+    <div class="form-grid">
+      <div class="field">
+        <label for="city-input" data-i18n="lblCity">Destination city</label>
+        <input id="city-input" type="text" placeholder="Bali, Indonesia" autocomplete="off">
+        <div class="examples" id="examples"></div>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label for="duration" data-i18n="lblDuration">Time available</label>
+          <select id="duration">
+            <option value="3" data-i18n="dur3">3 hours · half-day</option>
+            <option value="6" selected data-i18n="dur6">6 hours · full day</option>
+            <option value="10" data-i18n="dur10">10 hours · long day</option>
+            <option value="20" data-i18n="dur20">2 days · weekend</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="budget" data-i18n="lblBudget">Budget tier</label>
+          <select id="budget">
+            <option value="low" data-i18n="bgLow">Backpacker · &lt; $30</option>
+            <option value="mid" selected data-i18n="bgMid">Comfort · $30–80</option>
+            <option value="high" data-i18n="bgHigh">Premium · $80+</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label data-i18n="lblVibe">Vibe (pick any, default = food + culture)</label>
+        <div class="vibes" id="vibes"></div>
+      </div>
+
+      <button class="cta" id="plan-btn" data-i18n="ctaPlan">Plan my route →</button>
+    </div>
+
+    <div id="loading">
+      <div class="agent-step" data-step="1"><div class="step-num">1</div><div class="step-label" data-i18n="ag1">Geocoder agent · resolving city</div><div class="step-meta">Nominatim</div></div>
+      <div class="agent-step" data-step="2"><div class="step-num">2</div><div class="step-label" data-i18n="ag2">Scout agent · fetching POIs</div><div class="step-meta">Overpass</div></div>
+      <div class="agent-step" data-step="3"><div class="step-num">3</div><div class="step-label" data-i18n="ag3">Curator agent · selecting stops</div><div class="step-meta">MiMo V2.5</div></div>
+      <div class="agent-step" data-step="4"><div class="step-num">4</div><div class="step-label" data-i18n="ag4">Router agent · computing legs</div><div class="step-meta">OSRM</div></div>
+      <div class="agent-step" data-step="5"><div class="step-num">5</div><div class="step-label" data-i18n="ag5">Narrator agent · writing day plan</div><div class="step-meta">MiMo V2.5</div></div>
+    </div>
+
+    <div id="error"></div>
+  </section>
+
+  <section id="result">
+    <div class="result-head">
+      <div>
+        <h2 class="result-title" id="resTitle"></h2>
+        <div class="result-meta" id="resMeta"></div>
+      </div>
+      <div class="result-actions">
+        <button class="ico-btn" id="copy-btn">📋 <span data-i18n="copy">Copy itinerary</span></button>
+        <button class="ico-btn" id="share-btn">🔗 <span data-i18n="share">Share link</span></button>
+        <button class="ico-btn" id="map-btn">🗺️ <span data-i18n="openMap">Open in OSM</span></button>
+      </div>
+    </div>
+
+    <div class="narrative" id="narrative"></div>
+    <div class="stats" id="stats"></div>
+    <div class="timeline" id="timeline"></div>
+  </section>
+
+  <footer>
+    <div data-i18n-html="footerLine">Made with 🔥 by <a href="https://github.com/gyoomei">@gyoomei</a> · Powered by <a href="https://www.xiaomimimo.com/">Xiaomi MiMo V2.5</a> via Pollinations · Data from <a href="https://openstreetmap.org">OpenStreetMap</a> &amp; <a href="https://project-osrm.org">OSRM</a></div>
+    <div class="colophon">MimoRoute · Single HTML · Free · No API key</div>
+  </footer>
+</main>
+
+<script src="app.js?v=1"></script>
+</body>
+</html>
