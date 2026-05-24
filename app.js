@@ -60,7 +60,7 @@ const T = {
     eyebrow: 'AI Travel Planner · MiMo V2.5',
     heroH1: 'Tell me a city. Get a <em>real</em> day plan.',
     heroSub: 'Five agents geocode, scout, curate, route, and narrate — turning any city, budget, and time window into a multi-stop itinerary with cafes, food, culture, and walking legs between stops.',
-    pill1: '🆓 No API key', pill2: '🌍 200+ countries', pill3: '📍 OpenStreetMap data', pill4: '🚶 OSRM walking routes',
+    pill1: '🆓 No API key', pill2: '🌍 200+ countries', pill3: '📍 OpenStreetMap data', pill4: '🚶 Walking-first routes',
     lblCity: 'Destination city',
     lblDuration: 'Time available',
     lblBudget: 'Budget tier',
@@ -72,10 +72,10 @@ const T = {
     ag1: 'Geocoder agent · resolving city',
     ag2: 'Scout agent · fetching POIs',
     ag3: 'Curator agent · selecting stops',
-    ag4: 'Router agent · computing legs',
+    ag4: 'Router agent · computing walking legs',
     ag5: 'Narrator agent · writing day plan',
     copy: 'Copy itinerary', share: 'Share link', openMap: 'Open in OSM',
-    footerLine: 'Made with 🔥 by <a href="https://github.com/gyoomei">@gyoomei</a> · Powered by <a href="https://www.xiaomimimo.com/">Xiaomi MiMo V2.5</a> via Pollinations · Data from <a href="https://openstreetmap.org">OpenStreetMap</a> &amp; <a href="https://project-osrm.org">OSRM</a>',
+    footerLine: 'Made with 🔥 by <a href="https://github.com/gyoomei">@gyoomei</a> · Powered by <a href="https://www.xiaomimimo.com/">Xiaomi MiMo V2.5</a> via Pollinations · POI data from <a href="https://openstreetmap.org">OpenStreetMap</a>',
     errEmpty: 'Type a city first — e.g. "Bali" or "Tokyo".',
     errCity: 'Could not find that city. Try adding the country (e.g. "Bali, Indonesia").',
     errPois: 'No matching places found. Try a different vibe combination.',
@@ -91,7 +91,7 @@ const T = {
     eyebrow: 'Perencana Perjalanan AI · MiMo V2.5',
     heroH1: 'Sebut kotanya. Dapat rencana <em>asli</em> sehari.',
     heroSub: 'Lima agent ngegeocode, scout, kurasi, routing, dan menulis cerita — ubah kota, budget, dan jam yang kamu punya jadi itinerary multi-stop lengkap dengan kafe, kuliner, budaya, dan rute jalan kaki antar tempat.',
-    pill1: '🆓 Tanpa API key', pill2: '🌍 200+ negara', pill3: '📍 Data OpenStreetMap', pill4: '🚶 Rute jalan OSRM',
+    pill1: '🆓 Tanpa API key', pill2: '🌍 200+ negara', pill3: '📍 Data OpenStreetMap', pill4: '🚶 Rute jalan kaki',
     lblCity: 'Kota tujuan',
     lblDuration: 'Waktu tersedia',
     lblBudget: 'Tingkat budget',
@@ -103,10 +103,10 @@ const T = {
     ag1: 'Geocoder agent · cari koordinat kota',
     ag2: 'Scout agent · ambil daftar tempat',
     ag3: 'Curator agent · pilih stop terbaik',
-    ag4: 'Router agent · hitung rute jalan',
+    ag4: 'Router agent · hitung rute jalan kaki',
     ag5: 'Narrator agent · tulis cerita harian',
     copy: 'Salin itinerary', share: 'Salin link', openMap: 'Buka di OSM',
-    footerLine: 'Dibuat dengan 🔥 oleh <a href="https://github.com/gyoomei">@gyoomei</a> · Powered by <a href="https://www.xiaomimimo.com/">Xiaomi MiMo V2.5</a> via Pollinations · Data dari <a href="https://openstreetmap.org">OpenStreetMap</a> &amp; <a href="https://project-osrm.org">OSRM</a>',
+    footerLine: 'Dibuat dengan 🔥 oleh <a href="https://github.com/gyoomei">@gyoomei</a> · Powered by <a href="https://www.xiaomimimo.com/">Xiaomi MiMo V2.5</a> via Pollinations · Data POI dari <a href="https://openstreetmap.org">OpenStreetMap</a>',
     errEmpty: 'Ketik nama kota dulu — contoh "Bali" atau "Tokyo".',
     errCity: 'Kota tidak ketemu. Coba tambahin negaranya (contoh: "Bali, Indonesia").',
     errPois: 'Belum ada tempat yang cocok. Coba kombinasi suasana lain.',
@@ -197,12 +197,13 @@ async function agentScout(city, vibes) {
   return pois;
 }
 const pickRadius = (c) => {
-  // heuristic — bigger bbox = wider radius cap
-  if (!c.bbox) return 4000;
+  // Walking-friendly cap: never exceed 5km from center.
+  // Wider bbox just means the city is regional/sprawling; the user still walks.
+  if (!c.bbox) return 3500;
   const span = Math.abs(c.bbox[1] - c.bbox[0]) + Math.abs(c.bbox[3] - c.bbox[2]);
-  if (span > 1.0)  return 12000; // metros / regions
-  if (span > 0.4)  return 7000;
-  if (span > 0.15) return 4500;
+  if (span > 1.0)  return 5000; // metros / regions — capped at 5km walk
+  if (span > 0.4)  return 4500;
+  if (span > 0.15) return 3500;
   return 2500;
 };
 function classify(tags) {
@@ -288,20 +289,29 @@ function formatHm(h) {
   return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}${day}`;
 }
 
-// ---------- AGENT 4 — ROUTER (OSRM) ----------
+// ---------- AGENT 4 — ROUTER (haversine + walking model) ----------
+// NOTE: public OSRM only supports car profile. /foot/ silently falls back to driving.
+// We use a deterministic walking model: haversine × 1.35 detour factor at 4.8 km/h pace.
+// This is more honest than misusing OSRM and rate-limit-free.
 async function agentRoute(stops) {
   setStep(4, 'active');
   if (stops.length < 2) { setStep(4, 'done', '0 legs'); return { legs: [], totalDist: 0, totalDur: 0 }; }
-  // OSRM walking, batch as a single multi-waypoint request
-  const coords = stops.map(s => `${s.lon},${s.lat}`).join(';');
-  const url = `${OSRM}/route/v1/foot/${coords}?overview=false&steps=false`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('osrm_failed');
-  const json = await r.json();
-  if (!json.routes?.length) throw new Error('osrm_no_route');
-  const legs = json.routes[0].legs.map(l => ({ distance: l.distance, duration: l.duration }));
-  setStep(4, 'done', `${legs.length} legs · ${(json.routes[0].distance/1000).toFixed(1)}km`);
-  return { legs, totalDist: json.routes[0].distance, totalDur: json.routes[0].duration };
+  const DETOUR = 1.35;        // typical urban walking-detour over straight line
+  const SPEED_MS = 4.8 * 1000 / 3600; // 4.8 km/h → m/s
+  const legs = [];
+  let totalDist = 0, totalDur = 0;
+  for (let i = 0; i < stops.length - 1; i++) {
+    const straight = haversine(stops[i], stops[i + 1]);
+    const distance = straight * DETOUR;
+    const duration = distance / SPEED_MS;
+    legs.push({ distance, duration });
+    totalDist += distance;
+    totalDur += duration;
+  }
+  // tiny artificial delay so the loading UI shows the step
+  await new Promise(r => setTimeout(r, 250));
+  setStep(4, 'done', `${legs.length} legs · ${(totalDist/1000).toFixed(1)}km`);
+  return { legs, totalDist, totalDur };
 }
 
 // ---------- AGENT 5 — NARRATOR (MiMo V2.5 via Pollinations) ----------

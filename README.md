@@ -36,7 +36,7 @@ Built as one self-contained HTML page. No backend. No API key. No signup.
 | **Geocoding** | OpenStreetMap Nominatim — works for any city in 200+ countries, no key |
 | **POI scouting** | Overpass API queries 8 vibes (food, cafe, culture, nature, history, shop, nightlife, family) within an adaptive radius based on city size |
 | **Curation** | Round-robin pick across selected vibes + dedup + nearest-neighbor TSP ordering |
-| **Routing** | OSRM walking profile — multi-waypoint single request, returns leg-by-leg distance + time |
+| **Routing** | Walking model — haversine × 1.35 detour factor at 4.8 km/h (more honest than misusing public OSRM, which only supports car profile) |
 | **Narration** | MiMo V2.5 (via Pollinations gateway) writes a 3-4 sentence intro paragraph, with anti-Bahasa-Melayu safety net for ID mode |
 | **Interface** | Bilingual EN/ID, dark/light theme, mobile responsive, share URLs with deep-linked params |
 | **Output** | Copy itinerary as plain text, share link, open city in OSM, individual stop links to OSM + Google Maps |
@@ -61,7 +61,7 @@ Built as one self-contained HTML page. No backend. No API key. No signup.
    └──────┬──────┘
           │
    ┌──────▼──────┐  Agent 4 — Router
-   │ OSRM walk   │  → leg distances and durations
+   │ walking-model│  → leg distances and durations
    └──────┬──────┘
           │
    ┌──────▼──────┐  Agent 5 — Narrator
@@ -89,14 +89,14 @@ Built as one self-contained HTML page. No backend. No API key. No signup.
 - **Frontend:** Vanilla HTML + CSS + JS (no build step, no framework)
 - **Geocoding:** [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org)
 - **POI data:** [Overpass API](https://overpass-api.de) (OSM)
-- **Routing:** [OSRM](https://project-osrm.org) public foot profile
+- **Routing:** Deterministic walking model (haversine × 1.35 at 4.8 km/h) — see `agentRoute` in app.js
 - **AI:** [Xiaomi MiMo V2.5](https://www.xiaomimimo.com/) via [Pollinations.ai](https://pollinations.ai) gateway
 - **Hosting:** GitHub Pages
 
 ## Architecture decisions
 
 - **Single HTML, zero dependencies** — bullet-proof against deploy issues, no `npm install`, browser opens it directly. Forces architectural discipline.
-- **Adaptive radius** — bbox span from Nominatim drives the Overpass search radius. Bali gets 12 km, Yogya gets 4.5 km, neighborhood pins get 2.5 km.
+- **Adaptive radius** — bbox span from Nominatim drives the Overpass search radius, capped at 5 km from city center so every plan stays walkable. Bali → 5 km, Yogyakarta → 4.5 km, neighborhood pins → 2.5 km.
 - **Round-robin curation** — picks across selected vibes evenly so a "food + culture" trip never returns 6 cafes.
 - **Nearest-neighbor TSP** — greedy ordering from city center outward keeps walking realistic without computing optimal Hamiltonian paths.
 - **Narrator fallback** — if Pollinations is rate-limited, a deterministic templated narrative still ships. The route is the value, the paragraph is the polish.
