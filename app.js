@@ -272,16 +272,24 @@ function agentCurate(pois, vibes, durationH, city) {
     ordered.push(next);
     cur = next;
   }
+  // Drop outlier stops: if any leg exceeds 4km straight-line (≈5.4km walking),
+  // truncate the route there. Better a tight 4-stop plan than one 8km slog.
+  const MAX_LEG_M = 4000;
+  const trimmed = [ordered[0]];
+  for (let i = 1; i < ordered.length; i++) {
+    if (haversine(ordered[i - 1], ordered[i]) > MAX_LEG_M) break;
+    trimmed.push(ordered[i]);
+  }
   // assign time slots (linear across duration)
   const startH = durationH >= 20 ? 9 : Math.max(8, 12 - Math.round(durationH/2));
-  const slot = durationH / Math.max(1, ordered.length);
-  ordered.forEach((p, i) => {
+  const slot = durationH / Math.max(1, trimmed.length);
+  trimmed.forEach((p, i) => {
     const h = startH + slot * i;
     p.timeStart = formatHm(h);
     p.timeEnd   = formatHm(h + slot * 0.7);
   });
-  setStep(3, 'done', `${ordered.length} stops`);
-  return ordered;
+  setStep(3, 'done', `${trimmed.length} stops`);
+  return trimmed;
 }
 function formatHm(h) {
   const day = h >= 24 ? '+1' : '';
