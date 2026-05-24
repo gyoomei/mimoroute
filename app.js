@@ -197,13 +197,13 @@ async function agentScout(city, vibes) {
   return pois;
 }
 const pickRadius = (c) => {
-  // Walking-friendly cap: never exceed 5km from center.
-  // Wider bbox just means the city is regional/sprawling; the user still walks.
-  if (!c.bbox) return 3500;
+  // Walking-friendly cap: never exceed 3.5km from center.
+  // Wider bbox just means the city is regional; we still want a tight cluster.
+  if (!c.bbox) return 3000;
   const span = Math.abs(c.bbox[1] - c.bbox[0]) + Math.abs(c.bbox[3] - c.bbox[2]);
-  if (span > 1.0)  return 5000; // metros / regions — capped at 5km walk
-  if (span > 0.4)  return 4500;
-  if (span > 0.15) return 3500;
+  if (span > 1.0)  return 3500; // metros / regions — keep clustered
+  if (span > 0.4)  return 3500;
+  if (span > 0.15) return 3000;
   return 2500;
 };
 function classify(tags) {
@@ -228,10 +228,11 @@ function agentCurate(pois, vibes, durationH, city) {
   const byCat = {};
   pois.forEach(p => { (byCat[p.category] ||= []).push(p); });
   const orderedCats = [...vibes];
-  // Score each POI: shorter dist from city center weighted moderately
+  // Score each POI: distance from city center is the dominant factor for walking plans
   pois.forEach(p => {
     p._d = haversine(p, city);
-    p._score = -p._d / 1000 + (p.cuisine ? 0.3 : 0) + (p.hours ? 0.2 : 0) + (p.website ? 0.15 : 0);
+    // Heavy distance penalty: anything past 2km loses fast, past 3.5km is basically out
+    p._score = -Math.pow(p._d / 1000, 1.6) + (p.cuisine ? 0.3 : 0) + (p.hours ? 0.2 : 0) + (p.website ? 0.15 : 0);
   });
   Object.values(byCat).forEach(arr => arr.sort((a, b) => b._score - a._score));
 
